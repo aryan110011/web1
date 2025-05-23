@@ -1,20 +1,21 @@
 import os
 import time
 import requests
+import getpass
 from datetime import datetime
 from termcolor import cprint, colored
 
 SERVER_URL = "https://web1-w6na.onrender.com"
 
-# Animated red logo
+# 🔴 Animated red logo
 def print_logo():
     logo = [
         "                  __                    _ _           ",
         "                 / _|                  | | |          ",
         "  ___  __ _ _ __| |_ _   _   _ __ _   _| | | _____  __",
-        " / __|/ _` | '__|  _| | | | | '__| | | | | |/ _ \ \/ /",
-        " \__ \ (_| | |  | | | |_| | | |  | |_| | | |  __/>  < ",
-        " |___/\__,_|_|  |_|  \__,_| |_|   \__,_|_|_|\___/_/\_\\",
+        " / __|/ _` | '__|  _| | | | | '__| | | | | |/ _ \\ \\/ /",
+        " \\__ \\ (_| | |  | | | |_| | | |  | |_| | | |  __/>  < ",
+        " |___/\\__,_|_|  |_|  \\__,_| |_|   \\__,_|_|_|\\___/_/\\_\\",
         "                                                     ",
         "                                                     "
     ]
@@ -22,19 +23,19 @@ def print_logo():
         cprint(line, "red")
         time.sleep(0.1)
 
-# Password check (simple version)
+# 🔐 Password check
 def authenticate():
     print()
     cprint("Login Time: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yellow")
     print()
-    correct_password = "sarfu123"  # Simple fixed password
-    password = input(colored("Enter Password: ", "cyan"))
+    correct_password = "sarfu123"
+    password = getpass.getpass(colored("Enter Password: ", "cyan"))
     if password != correct_password:
         cprint("❌ Incorrect password. Access denied.", "red")
         exit()
     cprint("✅ Access granted.\n", "green")
 
-# Warning note
+# ⚠️ Warning note
 def show_note():
     warning_lines = [
         "Note:",
@@ -49,7 +50,7 @@ def show_note():
         time.sleep(0.4)
         cprint(line, "magenta")
 
-# Main menu
+# 🧭 Main menu
 def main_menu():
     while True:
         print()
@@ -70,12 +71,12 @@ def main_menu():
         elif choice == "4":
             stop_convo()
         elif choice == "5":
-            cprint("Exiting...", "red")
+            cprint("👋 Exiting... Take care!", "red")
             break
         else:
-            cprint("Invalid choice! Try again.", "red")
+            cprint("❌ Invalid choice! Try again.", "red")
 
-# Start New Conversation
+# 🚀 Start New Conversation
 def start_convo():
     convo_type = input(colored("Login Type (single/multi): ", "cyan")).strip().lower()
     accounts = []
@@ -89,15 +90,15 @@ def start_convo():
                 parts = line.strip().split("|")
                 if len(parts) == 2:
                     acc_type, value = parts
-                    data = {"type": acc_type, "value": value}
-                    res = requests.post(f"{SERVER_URL}/validate_id", json=data)
-                    if res.status_code == 200:
-                        result = res.json()
-                        if result.get("valid"):
-                            print(colored(f"✅ {result['name']}", "green"))
+                    try:
+                        res = requests.post(f"{SERVER_URL}/validate_id", json={"type": acc_type, "value": value})
+                        if res.status_code == 200 and res.json().get("valid"):
+                            print(colored(f"✅ {res.json()['name']}", "green"))
                             accounts.append({"type": acc_type, "value": value})
                         else:
                             print(colored("❌ Invalid ID", "red"))
+                    except:
+                        cprint("❌ Server error during validation.", "red")
         except FileNotFoundError:
             cprint("❌ File not found.", "red")
             return
@@ -105,31 +106,55 @@ def start_convo():
     elif convo_type == "single":
         acc_type = input("Login using (token/cookie): ").strip().lower()
         value = input(f"Paste your {acc_type}: ").strip()
-        res = requests.post(f"{SERVER_URL}/validate_id", json={"type": acc_type, "value": value})
-        if res.status_code == 200 and res.json().get("valid"):
-            print(colored(f"✅ {res.json()['name']}", "green"))
-            accounts.append({"type": acc_type, "value": value})
-        else:
-            cprint("❌ Invalid ID", "red")
+        try:
+            res = requests.post(f"{SERVER_URL}/validate_id", json={"type": acc_type, "value": value})
+            if res.status_code == 200 and res.json().get("valid"):
+                print(colored(f"✅ {res.json()['name']}", "green"))
+                accounts.append({"type": acc_type, "value": value})
+            else:
+                cprint("❌ Invalid ID", "red")
+                return
+        except:
+            cprint("❌ Server connection failed.", "red")
             return
     else:
         cprint("❌ Invalid login type", "red")
         return
 
-    group_count = int(input("How many Messenger group UIDs to send messages to? "))
-    group_ids = [input(f"Group UID {i+1}: ") for i in range(group_count)]
+    try:
+        group_count = int(input("How many Messenger group UIDs to send messages to? "))
+    except:
+        cprint("❌ Invalid number", "red")
+        return
+
+    group_ids = []
+    for i in range(group_count):
+        uid = input(f"Group UID {i+1}: ")
+        if not uid.isdigit():
+            cprint("❌ UID must be numeric", "red")
+            return
+        group_ids.append(uid)
 
     hatter_name = input("Enter your hatter name: ")
 
     message_mode = input("Message Mode (file/single): ").strip().lower()
     if message_mode == "file":
         file_path = input("Enter message file path: ")
-        with open(file_path, "r") as f:
-            messages = [line.strip() for line in f if line.strip()]
+        try:
+            with open(file_path, "r") as f:
+                messages = [line.strip() for line in f if line.strip()]
+        except:
+            cprint("❌ Message file not found.", "red")
+            return
     else:
         messages = [input("Enter your message: ")]
 
-    delay = int(input("Message delay (in seconds): "))
+    try:
+        delay = int(input("Message delay (in seconds): "))
+    except:
+        cprint("❌ Invalid delay time.", "red")
+        return
+
     convo_name = input("Enter a name for this conversation: ")
 
     payload = {
@@ -141,14 +166,20 @@ def start_convo():
         "convo_name": convo_name
     }
 
-    res = requests.post(f"{SERVER_URL}/start_convo", json=payload)
-    cprint(res.text, "yellow")
+    try:
+        res = requests.post(f"{SERVER_URL}/start_convo", json=payload)
+        cprint(res.text, "yellow")
+    except:
+        cprint("❌ Server error while starting convo", "red")
 
-# View Conversations
+# 👀 View Active Convos
 def view_convos():
     try:
         res = requests.get(f"{SERVER_URL}/view_convos")
         convos = res.json().get("conversations", [])
+        if not convos:
+            cprint("No active conversations.", "red")
+            return
         print("\nActive Conversations:")
         for c in convos:
             print(f"- {c}")
@@ -159,11 +190,14 @@ def view_convos():
     except:
         cprint("❌ Failed to fetch conversations", "red")
 
-# Resume Previous
+# 🔄 Resume
 def resume_convo():
     try:
         res = requests.get(f"{SERVER_URL}/resume_convos")
         resumables = res.json().get("resumable", [])
+        if not resumables:
+            cprint("No resumable conversations found.", "red")
+            return
         print("Resumable Conversations:")
         for c in resumables:
             print(f"- {c}")
@@ -174,11 +208,14 @@ def resume_convo():
     except:
         cprint("❌ Failed to resume", "red")
 
-# Stop Convo
+# ⛔ Stop Convo
 def stop_convo():
     try:
         res = requests.get(f"{SERVER_URL}/view_convos")
         convos = res.json().get("conversations", [])
+        if not convos:
+            cprint("No running conversations to stop.", "red")
+            return
         print("Running Conversations:")
         for c in convos:
             print(f"- {c}")
@@ -188,10 +225,13 @@ def stop_convo():
     except:
         cprint("❌ Failed to stop conversation", "red")
 
-# Run
+# 🚦 Run
 if __name__ == "__main__":
-    os.system("clear")
-    print_logo()
-    authenticate()
-    show_note()
-    main_menu()
+    try:
+        os.system("clear")
+        print_logo()
+        authenticate()
+        show_note()
+        main_menu()
+    except KeyboardInterrupt:
+        cprint("\n👋 Tool band kiya gaya. See you!", "cyan")
